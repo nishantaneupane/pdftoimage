@@ -1,29 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
 
 // PDF to image conversion using react-pdf's PDF.js setup
 const convertPdfToImages = async (file: File): Promise<string[]> => {
   try {
-    console.log('Starting PDF conversion with react-pdf...');
-    
+    console.log("Starting PDF conversion with react-pdf...");
+
     // Dynamic import to avoid SSR issues
-    const { pdfjs } = await import('react-pdf');
-    
+    const { pdfjs } = await import("react-pdf");
+
     // Use local worker file that we copied to public directory
-    if (typeof window !== 'undefined') {
-      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-      console.log('PDF.js worker configured to use local worker');
+    if (typeof window !== "undefined") {
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
+      console.log("PDF.js worker configured to use local worker");
     }
-    
-    console.log('Loading PDF file...');
-    
+
+    console.log("Loading PDF file...");
+
     // Read file as array buffer
     const arrayBuffer = await file.arrayBuffer();
-    
+
     // Load PDF document with compatibility settings
-    const loadingTask = pdfjs.getDocument({ 
+    const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
       useWorkerFetch: false,
       isEvalSupported: false,
@@ -31,105 +31,108 @@ const convertPdfToImages = async (file: File): Promise<string[]> => {
       disableAutoFetch: true,
       disableStream: true,
     });
-    
+
     const pdf = await loadingTask.promise;
-    
+
     console.log(`PDF loaded with ${pdf.numPages} pages`);
-    
+
     const images: string[] = [];
-    
+
     // Process each page
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
       console.log(`Rendering page ${pageNumber}...`);
-      
+
       const page = await pdf.getPage(pageNumber);
-      
+
       // Set scale for high quality
       const viewport = page.getViewport({ scale: 2.0 });
-      
+
       // Create canvas
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
       if (!context) {
-        throw new Error('Failed to get canvas context');
+        throw new Error("Failed to get canvas context");
       }
-      
+
       // Set canvas dimensions
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
+
       // Render page to canvas - this captures the actual PDF content
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
       } as any; // Bypass TypeScript strict checking for PDF.js parameters
-      
+
       const renderTask = page.render(renderContext);
       await renderTask.promise;
-      
+
       // Convert canvas to image data URL
-      const imageDataUrl = canvas.toDataURL('image/png', 0.95);
+      const imageDataUrl = canvas.toDataURL("image/png", 0.95);
       images.push(imageDataUrl);
-      
+
       console.log(`Page ${pageNumber} rendered successfully`);
     }
-    
+
     console.log(`All ${images.length} pages converted successfully`);
     return images;
-    
   } catch (error) {
-    console.error('PDF conversion failed:', error);
-    throw new Error(`PDF conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("PDF conversion failed:", error);
+    throw new Error(
+      `PDF conversion failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };
 
 // Helper function to create and download ZIP using JSZip
 const downloadImagesAsZip = async (images: string[], filename: string) => {
-  console.log('Creating ZIP file with JSZip...');
-  
-  const JSZip = (await import('jszip')).default;
+  console.log("Creating ZIP file with JSZip...");
+
+  const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
-  
+
   images.forEach((imageData, index) => {
-    const base64Data = imageData.split(',')[1];
+    const base64Data = imageData.split(",")[1];
     zip.file(`page_${index + 1}.png`, base64Data, { base64: true });
   });
-  
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
-  
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+
   // Download the ZIP file
   const url = URL.createObjectURL(zipBlob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
-  a.style.display = 'none';
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
-  console.log('ZIP file created and downloaded successfully');
+
+  console.log("ZIP file created and downloaded successfully");
 };
 
 export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState<string>('');
+  const [progress, setProgress] = useState<string>("");
   const [images, setImages] = useState<string[]>([]);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF file only');
+    if (file.type !== "application/pdf") {
+      setError("Please upload a PDF file only");
       return;
     }
 
     setIsProcessing(true);
-    setError('');
-    setProgress('Processing PDF...');
+    setError("");
+    setProgress("Processing PDF...");
     setImages([]);
 
     try {
@@ -137,8 +140,9 @@ export default function Home() {
       setImages(convertedImages);
       setProgress(`Successfully converted ${convertedImages.length} pages!`);
     } catch (error) {
-      console.error('Conversion error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("Conversion error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       setError(`Failed to convert PDF: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
@@ -148,20 +152,20 @@ export default function Home() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf']
+      "application/pdf": [".pdf"],
     },
     multiple: false,
-    disabled: isProcessing
+    disabled: isProcessing,
   });
 
   const handleDownload = async () => {
     if (images.length === 0) return;
 
     try {
-      await downloadImagesAsZip(images, 'pdf-images.zip');
+      await downloadImagesAsZip(images, "pdf-images.zip");
     } catch (error) {
-      console.error('Download error:', error);
-      setError('Download failed. Please try again.');
+      console.error("Download error:", error);
+      setError("Download failed. Please try again.");
     }
   };
 
@@ -183,9 +187,9 @@ export default function Home() {
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
               isDragActive
-                ? 'border-blue-400 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-            } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                ? "border-blue-400 bg-blue-50"
+                : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+            } ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <input {...getInputProps()} />
             <svg
@@ -201,7 +205,7 @@ export default function Home() {
                 strokeLinejoin="round"
               />
             </svg>
-            
+
             {isProcessing ? (
               <div>
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -211,8 +215,8 @@ export default function Home() {
               <div>
                 <p className="text-sm text-gray-600">
                   {isDragActive
-                    ? 'Drop the PDF file here...'
-                    : 'Drag & drop a PDF file here, or click to select'}
+                    ? "Drop the PDF file here..."
+                    : "Drag & drop a PDF file here, or click to select"}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">PDF files only</p>
               </div>
@@ -240,7 +244,9 @@ export default function Home() {
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Your files are processed in your browser and not sent to any server</p>
+          <p>
+            Your files are processed in your browser and not sent to any server
+          </p>
         </div>
       </div>
     </div>

@@ -1,23 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { readFile, stat } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { NextRequest, NextResponse } from "next/server";
+import { readFile, stat } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
-) {
+  { params }: { params: Promise<{ sessionId: string }> }
+): Promise<NextResponse> {
   try {
-    const { sessionId } = params;
-    
+    const { sessionId } = await params;
+
     if (!sessionId) {
-      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Session ID is required" },
+        { status: 400 }
+      );
     }
 
-    const zipPath = path.join(process.cwd(), 'temp', sessionId, 'images.zip');
+    const zipPath = path.join(process.cwd(), "temp", sessionId, "images.zip");
 
     if (!existsSync(zipPath)) {
-      return NextResponse.json({ error: 'ZIP file not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "ZIP file not found" },
+        { status: 404 }
+      );
     }
 
     // Read the ZIP file
@@ -28,14 +34,16 @@ export async function GET(
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="pdf-images-${sessionId}.zip"`,
-        'Content-Length': stats.size.toString(),
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="pdf-images-${sessionId}.zip"`,
+        "Content-Length": stats.size.toString(),
       },
     });
-
   } catch (error) {
-    console.error('Error downloading ZIP:', error);
-    return NextResponse.json({ error: 'Failed to download ZIP file' }, { status: 500 });
+    console.error("Error downloading ZIP:", error);
+    return NextResponse.json(
+      { error: "Failed to download ZIP file" },
+      { status: 500 }
+    );
   }
 }

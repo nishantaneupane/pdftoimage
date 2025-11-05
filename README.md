@@ -21,11 +21,13 @@ A Next.js web application that allows users to upload PDF files and download the
 ## Installation & Setup
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Run the development server:
+
    ```bash
    npm run dev
    ```

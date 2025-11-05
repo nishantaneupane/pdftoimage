@@ -1,10 +1,10 @@
-import { readdir, unlink, rmdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { readdir, unlink, rmdir } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 export async function cleanupTempFiles() {
-  const tempDir = path.join(process.cwd(), 'temp');
-  
+  const tempDir = path.join(process.cwd(), "temp");
+
   if (!existsSync(tempDir)) {
     return;
   }
@@ -30,6 +30,6 @@ export async function cleanupTempFiles() {
       }
     }
   } catch (error) {
-    console.error('Failed to cleanup temp files:', error);
+    console.error("Failed to cleanup temp files:", error);
   }
 }
